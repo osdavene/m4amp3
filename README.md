@@ -40,8 +40,8 @@ m4amp3/
 ### 1. Clonar el repositorio y configurar el entorno
 
 ```bash
-git clone https://github.com/osdavene/m4a-to-mp3.git
-cd m4a-to-mp3
+git clone https://github.com/osdavene/m4amp3.git
+cd m4amp3
 
 # Crear entorno virtual (opcional pero recomendado)
 python -m venv .venv
@@ -95,14 +95,14 @@ docker compose down
 ## ☁️ Despliegue en la Nube (Render, Railway, Fly.io, VPS)
 
 ### Opción A: Render / Railway / Fly.io
-1. Sube este repositorio a tu cuenta de GitHub (`osdavene/m4a-to-mp3`).
+1. Sube este repositorio a tu cuenta de GitHub (`osdavene/m4amp3`).
 2. En tu panel de **Render** o **Railway**, crea un nuevo *Web Service* vinculado a tu repositorio.
 3. El servicio detectará automáticamente el `Dockerfile` y expondrá la aplicación web en el puerto `8000` con certificado SSL HTTPS gratuito.
 
 ### Opción B: En tu propio VPS (Ubuntu / Debian)
 ```bash
-git clone https://github.com/osdavene/m4a-to-mp3.git
-cd m4a-to-mp3
+git clone https://github.com/osdavene/m4amp3.git
+cd m4amp3
 docker compose up -d
 ```
 
