@@ -1,4 +1,4 @@
-"""Aplicacion Movil Offline para Android usando Kivy y motor nativo de audio."""
+"""Aplicacion Movil Offline para Android usando Kivy y motor de conversion de audio."""
 
 import os
 import threading
@@ -18,15 +18,32 @@ from kivy.utils import platform
 from converter import convert_audio, get_ffmpeg_exe, SUPPORTED_INPUT_EXTENSIONS
 
 
-def request_android_permissions():
-    """Solicita permisos de almacenamiento en Android."""
+def get_base_storage_dir(subfolder=""):
+    """Obtiene una ruta valida de almacenamiento en Android o Escritorio."""
     if platform == "android":
-        from android.permissions import request_permissions, Permission
-        request_permissions([
-            Permission.READ_EXTERNAL_STORAGE,
-            Permission.WRITE_EXTERNAL_STORAGE,
-            Permission.MANAGE_EXTERNAL_STORAGE,
-        ])
+        candidates = [
+            "/storage/emulated/0",
+            "/sdcard",
+            os.environ.get("EXTERNAL_STORAGE", "")
+        ]
+        base_dir = "/storage/emulated/0"
+        for candidate in candidates:
+            if candidate and os.path.exists(candidate):
+                base_dir = candidate
+                break
+        
+        if subfolder:
+            target = os.path.join(base_dir, subfolder)
+            if os.path.exists(target):
+                return target
+        return base_dir
+    else:
+        user_home = os.path.expanduser("~")
+        if subfolder:
+            target = os.path.join(user_home, subfolder)
+            if os.path.exists(target):
+                return target
+        return user_home
 
 
 class MobileAudioConverterApp(App):
@@ -35,14 +52,12 @@ class MobileAudioConverterApp(App):
         self.selected_files = []
         self.convirtiendo = False
 
-        request_android_permissions()
-
         # Layout Principal
         root = BoxLayout(orientation="vertical", padding=15, spacing=10)
 
         # Header
         header = Label(
-            text="[b]Conversor Universal de Audio[/b]\n[size=14]Modo 100% Offline[/size]",
+            text="[b]Conversor Universal de Audio[/b]\n[size=14]Modo Offline[/size]",
             markup=True,
             size_hint_y=None,
             height=60,
@@ -56,7 +71,7 @@ class MobileAudioConverterApp(App):
         btn_add_files.bind(on_release=self.abrir_selector_archivos)
         btn_box.add_widget(btn_add_files)
 
-        btn_add_folder = Button(text="+ Carpeta Completa", background_color=(0.02, 0.71, 0.83, 1))
+        btn_add_folder = Button(text="+ Carpeta", background_color=(0.02, 0.71, 0.83, 1))
         btn_add_folder.bind(on_release=self.abrir_selector_carpeta)
         btn_box.add_widget(btn_add_folder)
 
@@ -112,10 +127,44 @@ class MobileAudioConverterApp(App):
 
         return root
 
+    def on_start(self):
+        """Se ejecuta una vez que la ventana e interfaz estan listas."""
+        if platform == "android":
+            Clock.schedule_once(lambda dt: self.solicitar_permisos_android(), 0.5)
+
+    def solicitar_permisos_android(self):
+        """Solicita los permisos de lectura de almacenamiento de forma segura."""
+        try:
+            from android.permissions import request_permissions, Permission
+            perms = []
+            
+            if hasattr(Permission, "READ_EXTERNAL_STORAGE"):
+                perms.append(Permission.READ_EXTERNAL_STORAGE)
+            else:
+                perms.append("android.permission.READ_EXTERNAL_STORAGE")
+                
+            if hasattr(Permission, "WRITE_EXTERNAL_STORAGE"):
+                perms.append(Permission.WRITE_EXTERNAL_STORAGE)
+            else:
+                perms.append("android.permission.WRITE_EXTERNAL_STORAGE")
+
+            # Permiso especifico de audio en Android 13+
+            if hasattr(Permission, "READ_MEDIA_AUDIO"):
+                perms.append(Permission.READ_MEDIA_AUDIO)
+            else:
+                perms.append("android.permission.READ_MEDIA_AUDIO")
+
+            request_permissions(perms)
+        except Exception as e:
+            print(f"Aviso al solicitar permisos: {e}")
+
     def abrir_selector_archivos(self, _):
-        initial_path = "/sdcard/Download" if platform == "android" else os.path.expanduser("~")
-        chooser = FileChooserListView(path=initial_path, multiselect=True)
-        
+        initial_path = get_base_storage_dir("Download")
+        try:
+            chooser = FileChooserListView(path=initial_path, multiselect=True)
+        except Exception:
+            chooser = FileChooserListView(path=get_base_storage_dir(), multiselect=True)
+
         popup_layout = BoxLayout(orientation="vertical", spacing=10, padding=10)
         popup_layout.add_widget(chooser)
         
@@ -136,8 +185,11 @@ class MobileAudioConverterApp(App):
         popup.open()
 
     def abrir_selector_carpeta(self, _):
-        initial_path = "/sdcard/Music" if platform == "android" else os.path.expanduser("~")
-        chooser = FileChooserListView(path=initial_path, dirselect=True)
+        initial_path = get_base_storage_dir("Music")
+        try:
+            chooser = FileChooserListView(path=initial_path, dirselect=True)
+        except Exception:
+            chooser = FileChooserListView(path=get_base_storage_dir(), dirselect=True)
         
         popup_layout = BoxLayout(orientation="vertical", spacing=10, padding=10)
         popup_layout.add_widget(chooser)
@@ -149,13 +201,14 @@ class MobileAudioConverterApp(App):
 
         def on_select(_):
             folder_path = chooser.path
-            for raiz, _dirs, nombres in os.walk(folder_path):
-                for nombre in nombres:
-                    _, ext = os.path.splitext(nombre)
-                    if ext.lower() in SUPPORTED_INPUT_EXTENSIONS:
-                        full_path = os.path.join(raiz, nombre)
-                        if full_path not in self.selected_files:
-                            self.selected_files.append(full_path)
+            if folder_path and os.path.isdir(folder_path):
+                for raiz, _dirs, nombres in os.walk(folder_path):
+                    for nombre in nombres:
+                        _, ext = os.path.splitext(nombre)
+                        if ext.lower() in SUPPORTED_INPUT_EXTENSIONS:
+                            full_path = os.path.join(raiz, nombre)
+                            if full_path not in self.selected_files:
+                                self.selected_files.append(full_path)
             self.actualizar_ui_archivos()
             popup.dismiss()
 
@@ -191,13 +244,16 @@ class MobileAudioConverterApp(App):
         target_fmt = self.spinner_formato.text.lower()
         bitrate = self.spinner_bitrate.text
 
-        # Directorio destino en Android o Escritorio
+        # Directorio destino
         if platform == "android":
-            out_dir = "/sdcard/Music/ConvertedAudio"
+            out_dir = os.path.join(get_base_storage_dir(), "Music", "ConvertedAudio")
         else:
             out_dir = os.path.join(os.path.expanduser("~"), "Music", "ConvertedAudio")
 
-        os.makedirs(out_dir, exist_ok=True)
+        try:
+            os.makedirs(out_dir, exist_ok=True)
+        except Exception:
+            pass
 
         thread = threading.Thread(
             target=self._proceso_conversion,
@@ -210,7 +266,7 @@ class MobileAudioConverterApp(App):
         try:
             ffmpeg_exe = get_ffmpeg_exe()
         except Exception as e:
-            Clock.schedule_once(lambda dt: self._finalizar_error(f"Error con FFmpeg: {e}"))
+            Clock.schedule_once(lambda dt: self._finalizar_error(f"Error: {e}"))
             return
 
         exitos = 0

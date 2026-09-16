@@ -30,8 +30,12 @@ def get_ffmpeg_exe() -> str:
     ffmpeg_system = shutil.which("ffmpeg")
     if ffmpeg_system:
         return ffmpeg_system
-    import imageio_ffmpeg
-    return imageio_ffmpeg.get_ffmpeg_exe()
+    try:
+        import imageio_ffmpeg
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        # En Android o entornos sin imageio-ffmpeg
+        return "ffmpeg"
 
 
 def find_audio_files(carpeta: str, incluir_subcarpetas: bool = True) -> List[str]:

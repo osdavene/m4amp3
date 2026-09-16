@@ -23,7 +23,7 @@ requirements = python3,kivy
 version = 2.0.0
 
 # (list) Permissions
-android.permissions = READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE, MANAGE_EXTERNAL_STORAGE
+android.permissions = READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE, READ_MEDIA_AUDIO
 
 # (int) Target Android API
 android.api = 33
