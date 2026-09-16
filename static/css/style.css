@@ -74,7 +74,7 @@ body {
 
 .container {
     width: 100%;
-    max-width: 680px;
+    max-width: 720px;
     position: relative;
     z-index: 1;
 }
@@ -132,7 +132,7 @@ body {
 .subtitle {
     color: var(--text-muted);
     font-size: 0.95rem;
-    max-width: 480px;
+    max-width: 520px;
     margin: 0 auto;
     line-height: 1.5;
 }
@@ -155,17 +155,16 @@ body {
 .dropzone {
     border: 2px dashed var(--border-color);
     border-radius: var(--radius-md);
-    padding: 36px 20px;
+    padding: 32px 20px;
     text-align: center;
     background: rgba(15, 23, 42, 0.4);
-    cursor: pointer;
     transition: var(--transition);
     position: relative;
 }
 
-.dropzone:hover, .dropzone.dragover {
+.dropzone.dragover {
     border-color: var(--primary);
-    background: rgba(99, 102, 241, 0.06);
+    background: rgba(99, 102, 241, 0.08);
     box-shadow: 0 0 25px rgba(99, 102, 241, 0.15);
 }
 
@@ -184,32 +183,56 @@ body {
 }
 
 .dropzone h3 {
-    font-size: 1.1rem;
+    font-size: 1.15rem;
     font-weight: 600;
-    margin-bottom: 4px;
+    margin-bottom: 12px;
 }
 
-.dropzone p {
-    font-size: 0.9rem;
-    color: var(--text-muted);
+.upload-options {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
 }
 
-.btn-link {
-    background: none;
-    border: none;
-    color: #818cf8;
+.btn-select {
+    background: rgba(99, 102, 241, 0.15);
+    border: 1px solid rgba(99, 102, 241, 0.35);
+    color: #c7d2fe;
+    font-size: 0.88rem;
     font-weight: 600;
+    padding: 9px 16px;
+    border-radius: var(--radius-sm);
     cursor: pointer;
-    text-decoration: underline;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: var(--transition);
 }
 
-.btn-link:hover {
-    color: #a5b4fc;
+.btn-select:hover {
+    background: rgba(99, 102, 241, 0.28);
+    border-color: var(--primary);
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+.btn-folder {
+    background: rgba(6, 182, 212, 0.15);
+    border-color: rgba(6, 182, 212, 0.35);
+    color: #a5f3fc;
+}
+
+.btn-folder:hover {
+    background: rgba(6, 182, 212, 0.28);
+    border-color: #06b6d4;
+    color: #ffffff;
 }
 
 .file-hint {
     display: inline-block;
-    margin-top: 10px;
+    margin-top: 6px;
     font-size: 0.75rem;
     color: var(--text-dim);
 }
@@ -311,15 +334,61 @@ body {
     background: rgba(239, 68, 68, 0.1);
 }
 
-/* Bitrate Selector */
+/* Conversion Settings */
+.conversion-settings {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.options-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
 .section-label {
-    display: block;
     font-size: 0.85rem;
     font-weight: 600;
     color: var(--text-muted);
-    margin-bottom: 10px;
 }
 
+/* Format Pills Grid */
+.format-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+}
+
+.format-pill {
+    cursor: pointer;
+}
+
+.format-pill input {
+    display: none;
+}
+
+.pill-badge {
+    display: block;
+    padding: 10px 4px;
+    text-align: center;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    transition: var(--transition);
+}
+
+.format-pill input:checked + .pill-badge {
+    background: rgba(99, 102, 241, 0.2);
+    border-color: var(--primary);
+    color: #ffffff;
+    box-shadow: 0 0 12px rgba(99, 102, 241, 0.25);
+}
+
+/* Bitrate Selector */
 .bitrate-selector {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -339,7 +408,7 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 10px 8px;
+    padding: 8px;
     background: rgba(15, 23, 42, 0.6);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
@@ -348,7 +417,7 @@ body {
 }
 
 .pill-content strong {
-    font-size: 0.9rem;
+    font-size: 0.88rem;
     color: var(--text-main);
 }
 
@@ -491,6 +560,9 @@ body {
 
 /* Responsive */
 @media (max-width: 600px) {
+    .format-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
     .bitrate-selector {
         grid-template-columns: repeat(2, 1fr);
     }
