@@ -23,18 +23,20 @@ jobs:
           port: ${{ secrets.AWS_PORT || 22 }}
           script_stop: true
           script: |
-            echo "🚀 Iniciando despliegue de M4A to MP3 en AWS..."
-            cd /home/m4amp3/htdocs/m4amp3.duckdns.org
-
-            # Configurar directorio seguro para Git
+            echo "🚀 Iniciando despliegue de M4A to MP3 en CloudPanel..."
             sudo git config --global --add safe.directory /home/m4amp3/htdocs/m4amp3.duckdns.org
 
+            sudo -u m4amp3 bash << 'EOF'
+            set -e
+            cd /home/m4amp3/htdocs/m4amp3.duckdns.org
+
             # 1. Descargar ultimos cambios
-            sudo -u m4amp3 git fetch origin main
-            sudo -u m4amp3 git reset --hard origin/main
+            git fetch origin main
+            git reset --hard origin/main
 
             # 2. Actualizar dependencias de Python si cambiaron
-            sudo -u m4amp3 /home/m4amp3/htdocs/m4amp3.duckdns.org/.venv/bin/pip install -r requirements.txt
+            ./.venv/bin/pip install -r requirements.txt
+            EOF
 
             # 3. Reiniciar el servicio en segundo plano
             sudo systemctl restart m4amp3.service
