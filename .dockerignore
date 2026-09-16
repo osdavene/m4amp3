@@ -1,0 +1,16 @@
+.git
+.gitignore
+.claude
+.idea
+.vscode
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.env
+.venv
+env/
+venv/
+*.m4a
+*.mp3
+*.zip

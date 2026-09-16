@@ -1,0 +1,9 @@
+services:
+  m4a-converter:
+    build: .
+    container_name: m4a-converter-web
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1

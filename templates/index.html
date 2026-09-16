@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversor M4A a MP3 - Web</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="background-decorations">
+        <div class="circle circle-1"></div>
+        <div class="circle circle-2"></div>
+    </div>
+
+    <main class="container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="badge-tag">
+                <span class="pulse-dot"></span>
+                <span>FFmpeg Powered</span>
+            </div>
+            <h1>Conversor de <span>M4A a MP3</span></h1>
+            <p class="subtitle">Convierte tus pistas y notas de voz rápidamente con la máxima fidelidad de audio.</p>
+        </header>
+
+        <!-- Main Card -->
+        <section class="card">
+            <!-- Dropzone -->
+            <div class="dropzone" id="dropzone">
+                <input type="file" id="fileInput" multiple accept=".m4a,audio/x-m4a,audio/m4a,audio/mp4" class="file-input">
+                <div class="dropzone-content">
+                    <div class="upload-icon">
+                        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                    </div>
+                    <h3>Arrastra tus archivos .m4a aquí</h3>
+                    <p>o <button type="button" class="btn-link" id="browseBtn">selecciona desde tu equipo</button></p>
+                    <span class="file-hint">Soporta archivos individuales y procesamiento por lotes</span>
+                </div>
+            </div>
+
+            <!-- File List Preview -->
+            <div class="file-list-container" id="fileListContainer" style="display: none;">
+                <div class="file-list-header">
+                    <h4>Archivos seleccionados (<span id="fileCount">0</span>)</h4>
+                    <button type="button" class="btn-clear" id="clearFilesBtn">Limpiar lista</button>
+                </div>
+                <div class="file-list" id="fileList"></div>
+            </div>
+
+            <!-- Options: Bitrate Selector -->
+            <div class="options-container">
+                <label class="section-label">Calidad de audio (Bitrate):</label>
+                <div class="bitrate-selector" id="bitrateSelector">
+                    <label class="bitrate-pill">
+                        <input type="radio" name="bitrate" value="128k">
+                        <span class="pill-content">
+                            <strong>128 kbps</strong>
+                            <small>Estándar</small>
+                        </span>
+                    </label>
+                    <label class="bitrate-pill">
+                        <input type="radio" name="bitrate" value="192k" checked>
+                        <span class="pill-content">
+                            <strong>192 kbps</strong>
+                            <small>Recomendado</small>
+                        </span>
+                    </label>
+                    <label class="bitrate-pill">
+                        <input type="radio" name="bitrate" value="256k">
+                        <span class="pill-content">
+                            <strong>256 kbps</strong>
+                            <small>Alta calidad</small>
+                        </span>
+                    </label>
+                    <label class="bitrate-pill">
+                        <input type="radio" name="bitrate" value="320k">
+                        <span class="pill-content">
+                            <strong>320 kbps</strong>
+                            <small>Máxima fidelidad</small>
+                        </span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Progress Box -->
+            <div class="progress-box" id="progressBox" style="display: none;">
+                <div class="progress-info">
+                    <span id="progressStatus">Convirtiendo audios...</span>
+                    <span id="progressPercent">0%</span>
+                </div>
+                <div class="progress-bar-track">
+                    <div class="progress-bar-fill" id="progressBarFill"></div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="actions">
+                <button type="button" class="btn-convert" id="convertBtn" disabled>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                    <span>Comenzar Conversión</span>
+                </button>
+            </div>
+
+            <!-- Result Feedback Alert -->
+            <div class="alert-box" id="alertBox" style="display: none;"></div>
+        </section>
+
+        <!-- Features / Footer -->
+        <footer class="app-footer">
+            <div class="feature-item">
+                <span class="feature-icon">⚡</span>
+                <div>
+                    <strong>Rápido y Ligero</strong>
+                    <p>Conversión nativa directa con FFmpeg sin intermediarios.</p>
+                </div>
+            </div>
+            <div class="feature-item">
+                <span class="feature-icon">🔒</span>
+                <div>
+                    <strong>Privacidad Total</strong>
+                    <p>Los archivos procesados se eliminan automáticamente del servidor.</p>
+                </div>
+            </div>
+            <div class="feature-item">
+                <span class="feature-icon">📦</span>
+                <div>
+                    <strong>Lotes a ZIP</strong>
+                    <p>Convierte carpetas o múltiples archivos y descárgalos agrupados.</p>
+                </div>
+            </div>
+        </footer>
+    </main>
+
+    <script src="/static/js/main.js"></script>
+</body>
+</html>
