@@ -24,19 +24,19 @@ jobs:
           script_stop: true
           script: |
             echo "🚀 Iniciando despliegue de M4A to MP3 en AWS..."
-            cd ${{ secrets.AWS_PROJECT_PATH }}
+            cd /home/m4amp3/htdocs/m4amp3.duckdns.org
 
             # Configurar directorio seguro para Git
-            sudo git config --global --add safe.directory ${{ secrets.AWS_PROJECT_PATH }}
+            sudo git config --global --add safe.directory /home/m4amp3/htdocs/m4amp3.duckdns.org
 
             # 1. Descargar ultimos cambios
-            git fetch origin main
-            git reset --hard origin/main
+            sudo -u m4amp3 git fetch origin main
+            sudo -u m4amp3 git reset --hard origin/main
 
-            # 2. Reconstruir y reiniciar contenedor Docker
-            if [ -f "docker-compose.yml" ]; then
-              docker compose down || true
-              docker compose up -d --build
-            fi
+            # 2. Actualizar dependencias de Python si cambiaron
+            sudo -u m4amp3 /home/m4amp3/htdocs/m4amp3.duckdns.org/.venv/bin/pip install -r requirements.txt
 
-            echo "✅ ¡Despliegue de M4A to MP3 completado exitosamente!"
+            # 3. Reiniciar el servicio en segundo plano
+            sudo systemctl restart m4amp3.service
+
+            echo "✅ ¡Despliegue de M4A to MP3 completado exitosamente con 0 downtime!"
