@@ -1,7 +1,7 @@
 name: 📱 Compilar APK de Android (Buildozer)
 
 on:
-  workflow_dispatch: # Permite ejecutar la compilacion manualmente con un boton
+  workflow_dispatch:
   push:
     tags:
       - 'v*'
@@ -9,39 +9,22 @@ on:
 jobs:
   build:
     name: Compilar APK Android
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     steps:
       - name: 📥 Clonar repositorio
         uses: actions/checkout@v4
 
-      - name: 🐍 Configurar Python
-        uses: actions/setup-python@v5
+      - name: 📱 Compilar APK con Buildozer Action
+        uses: ArtemSBulgakov/buildozer-action@v1
+        id: buildozer
         with:
-          python-version: '3.11'
-
-      - name: ☕ Configurar Java JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: 📦 Instalar dependencias del sistema y Buildozer
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y git zip unzip openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev cython3
-          pip install --upgrade pip
-          pip install buildozer cython virtualenv
-
-      - name: 📱 Compilar APK con Buildozer
-        run: |
-          # Copiar mobile_app.py como main.py para el empaquetado de Kivy
-          cp mobile_app.py main.py
-          buildozer android debug
+          workdir: .
+          buildozer_version: master
 
       - name: 📤 Subir APK como Artefacto descargable
         uses: actions/upload-artifact@v4
         with:
           name: ConversorAudio-Android-APK
-          path: bin/*.apk
+          path: ${{ steps.buildozer.outputs.filename }}
           retention-days: 30
