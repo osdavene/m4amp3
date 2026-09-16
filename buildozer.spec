@@ -34,6 +34,9 @@ android.minapi = 21
 # (list) The Android archs to build for
 android.archs = arm64-v8a, armeabi-v7a
 
+# (str) python-for-android branch/tag to use (v2024.01.21 para Python 3.11 estable)
+p4a.branch = v2024.01.21
+
 # (bool) Indicate if the application should be fullscreen or not
 fullscreen = 0
 

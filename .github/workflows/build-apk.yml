@@ -26,33 +26,12 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: ⚡ Caché de herramientas Android (SDK / NDK)
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.buildozer
-            .buildozer/android/platform/android-sdk
-            .buildozer/android/platform/android-ndk*
-          key: buildozer-android-${{ hashFiles('buildozer.spec') }}
-          restore-keys: |
-            buildozer-android-
-
       - name: 📦 Instalar dependencias del sistema y Buildozer
         run: |
           sudo apt-get update
           sudo apt-get install -y git zip unzip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
           pip install "pip<25.0" setuptools wheel
           pip install "buildozer>=1.5.0" "cython<3.0" virtualenv
-
-      - name: 🛠️ Preparar python-for-android con soporte de pip compatible
-        run: |
-          mkdir -p .buildozer/android/platform
-          if [ ! -d ".buildozer/android/platform/python-for-android" ]; then
-            git clone --depth 1 https://github.com/kivy/python-for-android.git .buildozer/android/platform/python-for-android
-          fi
-          # Evitar el bug de 'BuildDependencyInstallError' forzando pip < 25.0 en el entorno interno de p4a
-          find .buildozer/android/platform/python-for-android/pythonforandroid/ -name "*.py" -exec sed -i 's/pip install -U pip/pip install -U "pip<25.0"/g' {} +
-          find .buildozer/android/platform/python-for-android/pythonforandroid/ -name "*.py" -exec sed -i 's/pip install --upgrade pip/pip install --upgrade "pip<25.0"/g' {} +
 
       - name: 📱 Compilar APK con Buildozer
         run: |
