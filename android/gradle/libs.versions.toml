@@ -27,4 +27,3 @@ ffmpeg-kit-full = { group = "com.arthenica", name = "ffmpeg-kit-full", version.r
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
-compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
