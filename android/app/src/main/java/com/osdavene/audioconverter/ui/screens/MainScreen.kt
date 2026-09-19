@@ -49,14 +49,12 @@ fun MainScreen(
         }
     }
 
-    // Selector de carpeta (árbol de documentos)
+    // Selector de carpeta completa (árbol de documentos)
     val openTreeLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()
     ) { treeUri: Uri? ->
         treeUri?.let { uri ->
-            // Si el usuario elige una carpeta, podemos abrir archivos de ella
-            // Por simplicidad y compatibilidad usamos el selector directo de archivos
-            viewModel.addUris(listOf(uri))
+            viewModel.addFolderTree(uri)
         }
     }
 
@@ -231,7 +229,7 @@ fun MainScreen(
 
                     OutlinedButton(
                         onClick = {
-                            openFilesLauncher.launch(arrayOf("audio/*", "video/*"))
+                            openTreeLauncher.launch(null)
                         },
                         enabled = !isConverting,
                         modifier = Modifier
@@ -244,7 +242,7 @@ fun MainScreen(
                         Icon(Icons.Default.FolderOpen, contentDescription = null, modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Explorador",
+                            text = "+ Carpeta",
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 14.sp
                         )

@@ -1,18 +1,22 @@
 package com.osdavene.audioconverter.viewmodel
 
 import android.app.Application
+import android.content.Intent
 import android.net.Uri
 import android.provider.OpenableColumns
+import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.osdavene.audioconverter.model.AudioFileItem
 import com.osdavene.audioconverter.model.ConversionStatus
 import com.osdavene.audioconverter.service.AudioConverterEngine
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class ConverterViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -35,6 +39,10 @@ class ConverterViewModel(application: Application) : AndroidViewModel(applicatio
     val statusMessage: StateFlow<String> = _statusMessage.asStateFlow()
 
     private var conversionJob: Job? = null
+
+    private val SUPPORTED_EXTENSIONS = setOf(
+        "m4a", "mp3", "wav", "flac", "ogg", "opus", "aac", "wma", "aiff", "aif", "m4r", "mp4", "webm", "mkv", "mov", "avi", "amr", "3gp"
+    )
 
     fun setTargetFormat(format: String) {
         _targetFormat.value = format
@@ -81,6 +89,57 @@ class ConverterViewModel(application: Application) : AndroidViewModel(applicatio
         if (newItems.isNotEmpty()) {
             _selectedFiles.value = _selectedFiles.value + newItems
             _statusMessage.value = "${_selectedFiles.value.size} archivo(s) listos para convertir"
+        }
+    }
+
+    fun addFolderTree(treeUri: Uri) {
+        val context = getApplication<Application>().applicationContext
+        try {
+            val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+            context.contentResolver.takePersistableUriPermission(treeUri, flags)
+        } catch (_: Exception) {}
+
+        _statusMessage.value = "Escaneando carpeta en busca de audios..."
+
+        viewModelScope.launch(Dispatchers.IO) {
+            val rootDoc = DocumentFile.fromTreeUri(context, treeUri) ?: return@launch
+            val newItems = mutableListOf<AudioFileItem>()
+
+            fun scanDir(dir: DocumentFile) {
+                val files = dir.listFiles()
+                for (file in files) {
+                    if (file.isDirectory) {
+                        scanDir(file)
+                    } else {
+                        val name = file.name ?: continue
+                        val ext = name.substringAfterLast(".", "").lowercase()
+                        if (ext in SUPPORTED_EXTENSIONS) {
+                            val uri = file.uri
+                            if (_selectedFiles.value.none { it.uri == uri } && newItems.none { it.uri == uri }) {
+                                newItems.add(
+                                    AudioFileItem(
+                                        uri = uri,
+                                        name = name,
+                                        sizeBytes = file.length(),
+                                        extension = ext
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            scanDir(rootDoc)
+
+            withContext(Dispatchers.Main) {
+                if (newItems.isNotEmpty()) {
+                    _selectedFiles.value = _selectedFiles.value + newItems
+                    _statusMessage.value = "📁 ${newItems.size} audio(s) encontrados en la carpeta (${_selectedFiles.value.size} total)"
+                } else {
+                    _statusMessage.value = "No se encontraron audios compatibles en la carpeta"
+                }
+            }
         }
     }
 
