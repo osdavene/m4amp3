@@ -8,7 +8,6 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import com.arthenica.ffmpegkit.FFmpegKit
-import com.arthenica.ffmpegkit.FFmpegKitConfig
 import com.arthenica.ffmpegkit.ReturnCode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -41,61 +40,69 @@ object AudioConverterEngine {
         var tempOutputFile: File? = null
 
         try {
-            // 1. Preparar archivo de entrada temporal
-            val baseName = inputName.substringBeforeLast(".")
-            val ext = inputName.substringAfterLast(".", "")
-            tempInputFile = File(context.cacheDir, "input_${System.currentTimeMillis()}.$ext")
+            // 1. Copiar archivo de entrada a cache temporal de forma segura
+            val baseName = inputName.substringBeforeLast(".").ifBlank { "audio_${System.currentTimeMillis()}" }
+            val ext = inputName.substringAfterLast(".", "tmp")
+            tempInputFile = File(context.cacheDir, "in_${System.currentTimeMillis()}.$ext")
 
-            context.contentResolver.openInputStream(inputUri)?.use { input ->
-                FileOutputStream(tempInputFile).use { output ->
-                    input.copyTo(output)
+            val copied = runCatching {
+                context.contentResolver.openInputStream(inputUri)?.use { input ->
+                    FileOutputStream(tempInputFile).use { output ->
+                        input.copyTo(output)
+                    }
                 }
-            } ?: return@withContext Result.failure(Exception("No se pudo leer el archivo de entrada"))
+            }.isSuccess
+
+            if (!copied || !tempInputFile.exists() || tempInputFile.length() == 0L) {
+                return@withContext Result.failure(Exception("No se pudo leer el archivo de origen ($inputName)"))
+            }
 
             // 2. Preparar archivo de salida temporal
             val outputExt = targetFormat.lowercase().trimStart('.')
-            tempOutputFile = File(context.cacheDir, "output_${System.currentTimeMillis()}.$outputExt")
+            tempOutputFile = File(context.cacheDir, "out_${System.currentTimeMillis()}.$outputExt")
 
-            // 3. Construir comando FFmpeg
-            val cmdList = mutableListOf<String>()
-            cmdList.add("-y")
-            cmdList.add("-i")
-            cmdList.add(tempInputFile.absolutePath)
-            cmdList.add("-vn") // Descartar cualquier pista de video
+            // 3. Construir lista de argumentos limpia para FFmpeg
+            val args = mutableListOf<String>()
+            args.add("-y")
+            args.add("-i")
+            args.add(tempInputFile.absolutePath)
+            args.add("-vn") // Sin pista de video
 
             val codecArgs = CODEC_MAP[outputExt] ?: listOf("-c:a", "libmp3lame")
-            cmdList.addAll(codecArgs)
+            args.addAll(codecArgs)
 
-            // Formatos con bitrate
+            // Bitrate para formatos comprimidos
             if (outputExt !in listOf("wav", "flac", "aiff")) {
-                cmdList.add("-b:a")
-                cmdList.add(bitrate)
+                args.add("-b:a")
+                args.add(bitrate)
             }
 
-            cmdList.add(tempOutputFile.absolutePath)
+            args.add(tempOutputFile.absolutePath)
 
-            val cmd = cmdList.joinToString(" ")
-
-            // 4. Ejecutar FFmpeg
-            val session = FFmpegKit.execute(cmd)
+            // 4. Ejecutar FFmpeg con lista de argumentos segura (evita problemas de espacios)
+            val session = FFmpegKit.executeWithArguments(args.toTypedArray())
             val returnCode = session.returnCode
 
             if (ReturnCode.isSuccess(returnCode)) {
-                // 5. Guardar el archivo en la carpeta publica de Musica
-                val finalFileName = "$baseName.$outputExt"
-                val savedPath = saveToPublicMusic(context, tempOutputFile, finalFileName, outputExt)
-                Result.success(savedPath)
+                if (tempOutputFile.exists() && tempOutputFile.length() > 0L) {
+                    val finalFileName = "$baseName.$outputExt"
+                    val savedPath = saveToPublicMusic(context, tempOutputFile, finalFileName, outputExt)
+                    Result.success(savedPath)
+                } else {
+                    Result.failure(Exception("El archivo convertido está vacío"))
+                }
             } else {
-                val outputLog = session.allLogsAsString
-                Result.failure(Exception("Error FFmpeg (${returnCode?.value}): $outputLog"))
+                val errorLogs = session.allLogsAsString
+                val failMsg = session.failStackTrace ?: errorLogs
+                Result.failure(Exception("Fallo en FFmpeg (${returnCode?.value}): $failMsg"))
             }
-        } catch (e: Exception) {
-            Result.failure(e)
+        } catch (t: Throwable) {
+            Result.failure(Exception(t.message ?: "Error inesperado durante la conversión", t))
         } finally {
             try {
                 tempInputFile?.delete()
                 tempOutputFile?.delete()
-            } catch (_: Exception) {}
+            } catch (_: Throwable) {}
         }
     }
 
@@ -105,47 +112,56 @@ object AudioConverterEngine {
         fileName: String,
         extension: String
     ): String {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val contentValues = ContentValues().apply {
-                put(MediaStore.Audio.Media.DISPLAY_NAME, fileName)
-                put(MediaStore.Audio.Media.MIME_TYPE, getMimeType(extension))
-                put(MediaStore.Audio.Media.RELATIVE_PATH, "${Environment.DIRECTORY_MUSIC}/ConvertedAudio")
-                put(MediaStore.Audio.Media.IS_PENDING, 1)
-            }
-
-            val resolver = context.contentResolver
-            val uri = resolver.insert(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, contentValues)
-                ?: throw Exception("No se pudo crear el archivo en MediaStore")
-
-            resolver.openOutputStream(uri)?.use { out ->
-                sourceFile.inputStream().use { inStream ->
-                    inStream.copyTo(out)
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.Audio.Media.DISPLAY_NAME, fileName)
+                    put(MediaStore.Audio.Media.MIME_TYPE, getMimeType(extension))
+                    put(MediaStore.Audio.Media.RELATIVE_PATH, "${Environment.DIRECTORY_MUSIC}/ConvertedAudio")
+                    put(MediaStore.Audio.Media.IS_PENDING, 1)
                 }
+
+                val resolver = context.contentResolver
+                val uri = resolver.insert(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, contentValues)
+                    ?: throw Exception("No se pudo crear entrada en MediaStore")
+
+                resolver.openOutputStream(uri)?.use { out ->
+                    sourceFile.inputStream().use { inStream ->
+                        inStream.copyTo(out)
+                    }
+                }
+
+                contentValues.clear()
+                contentValues.put(MediaStore.Audio.Media.IS_PENDING, 0)
+                resolver.update(uri, contentValues, null, null)
+
+                "Música/ConvertedAudio/$fileName"
+            } else {
+                val musicDir = File(
+                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC),
+                    "ConvertedAudio"
+                )
+                if (!musicDir.exists()) musicDir.mkdirs()
+
+                val destFile = File(musicDir, fileName)
+                sourceFile.copyTo(destFile, overwrite = true)
+
+                MediaScannerConnection.scanFile(
+                    context,
+                    arrayOf(destFile.absolutePath),
+                    arrayOf(getMimeType(extension)),
+                    null
+                )
+
+                destFile.absolutePath
             }
-
-            contentValues.clear()
-            contentValues.put(MediaStore.Audio.Media.IS_PENDING, 0)
-            resolver.update(uri, contentValues, null, null)
-
-            "Música/ConvertedAudio/$fileName"
-        } else {
-            val musicDir = File(
-                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC),
-                "ConvertedAudio"
-            )
-            if (!musicDir.exists()) musicDir.mkdirs()
-
-            val destFile = File(musicDir, fileName)
-            sourceFile.copyTo(destFile, overwrite = true)
-
-            MediaScannerConnection.scanFile(
-                context,
-                arrayOf(destFile.absolutePath),
-                arrayOf(getMimeType(extension)),
-                null
-            )
-
-            destFile.absolutePath
+        } catch (e: Throwable) {
+            // Fallback: guardar en carpeta privada de la app
+            val fallbackDir = File(context.getExternalFilesDir(Environment.DIRECTORY_MUSIC), "ConvertedAudio")
+            if (!fallbackDir.exists()) fallbackDir.mkdirs()
+            val fallbackFile = File(fallbackDir, fileName)
+            sourceFile.copyTo(fallbackFile, overwrite = true)
+            fallbackFile.absolutePath
         }
     }
 
